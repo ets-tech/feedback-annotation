@@ -11,6 +11,10 @@ const params = new URL( import.meta.url ).searchParams;
 const APP = params.get( 'app' ) || 'TestApp';
 const HIDDEN = ( params.get( 'hide' ) || '' ).toLowerCase().split( ',' ).map( ( s ) => s.trim() );
 const HIDE_BUTTON = 'true' === ( params.get( 'hide_all_feedback_button' ) || '' ).toLowerCase();
+// Posting lives in the drawer, so hide_all_feedback_button turns it off too.
+const POST_URL = HIDE_BUTTON ? '' : params.get( 'post_url' ) || '';
+const TOKEN = params.get( 'post_token' ) || '';
+const POST_LABEL = params.get( 'post_label' ) || 'Post to server';
 
 // Defaults, written once per browser so later changes in the toolbar settings stick.
 try {
@@ -23,15 +27,21 @@ try {
 // Agentation keeps one list per path and copies only the current one; the tab copies every path's list,
 // in Agentation's own "forensic" layout (its formatter is not exported, so it is mirrored here).
 const PREFIX = 'feedback-annotations-'; // Agentation's key, not ours: renaming it would lose the notes.
-// Agentation keys its list by pathname alone, so ?date=… variants of one page share a list. Remember
-// the full path + query each annotation was made on (by id, via Agentation's callbacks) and group the report by that.
+// Agentation keys its list by pathname alone, so ?date=… and #/route variants of one page share a list. Remember
+// the full path + query + fragment each annotation was made on (by id, via Agentation's callbacks) and group the report by that.
 const URLS = 'ets-tech-feedback-annotations-urls';
-const urls = () => { try { return JSON.parse( localStorage.getItem( URLS ) ) || {}; } catch ( e ) { return {}; } };
-const remember = ( change ) => { try { const seen = urls(); change( seen ); localStorage.setItem( URLS, JSON.stringify( seen ) ); } catch ( e ) {} };
+const DEVICE = 'ets-tech-feedback-annotations-device';
+const DELETED = 'ets-tech-feedback-annotations-deleted'; // id → when, for notes deleted since the last post.
+const POSTED = 'ets-tech-feedback-annotations-posted'; // id → comment as last posted, to spot new and edited notes.
+const load = ( key ) => { try { return JSON.parse( localStorage.getItem( key ) ) || {}; } catch ( e ) { return {}; } };
+const update = ( key, change ) => { try { const o = load( key ); change( o ); localStorage.setItem( key, JSON.stringify( o ) ); } catch ( e ) {} };
+const urls = () => load( URLS );
+const remember = ( change ) => update( URLS, change );
+const deleted = ( list ) => POST_URL && update( DELETED, ( d ) => list.forEach( ( a ) => { d[ a.id ] = new Date().toISOString(); } ) );
 const callbacks = {
-	onAnnotationAdd: ( a ) => remember( ( seen ) => { seen[ a.id ] = location.pathname + location.search; } ),
-	onAnnotationDelete: ( a ) => remember( ( seen ) => { delete seen[ a.id ]; } ),
-	onAnnotationsClear: ( list ) => remember( ( seen ) => list.forEach( ( a ) => delete seen[ a.id ] ) ),
+	onAnnotationAdd: ( a ) => remember( ( seen ) => { seen[ a.id ] = location.pathname + location.search + location.hash; } ),
+	onAnnotationDelete: ( a ) => { remember( ( seen ) => { delete seen[ a.id ]; } ); deleted( [ a ] ); },
+	onAnnotationsClear: ( list ) => { remember( ( seen ) => list.forEach( ( a ) => delete seen[ a.id ] ) ); deleted( list ); },
 };
 const host = document.createElement( 'div' );
 document.body.append( host );
@@ -84,7 +94,7 @@ function sendButton() {
 		+ '#ets-tech-feedback-annotations-all .menu button{padding:8px 10px;border-radius:.375rem;text-align:left;transition:background-color .15s ease}#ets-tech-feedback-annotations-all .menu button:hover{background:var(--hover)}#ets-tech-feedback-annotations-all .menu .danger{color:#ef4444}#ets-tech-feedback-annotations-all .menu .danger:hover{background:rgba(239,68,68,.12)}#ets-tech-feedback-annotations-all hr{border:0;border-top:1px solid var(--line);margin:4px 2px}#ets-tech-feedback-annotations-all .head{padding:6px 10px 6px;color:var(--fg);opacity:.55;font-size:12px;font-weight:600}'
 		// Host CSS like dialog{display:block} would otherwise show the closed dialog.
 		+ '#ets-tech-feedback-annotations-clear{max-width:340px;padding:0;border:0;border-radius:1rem;background:var(--bg);color:var(--fg);box-shadow:0 10px 40px rgba(0,0,0,.4),0 0 0 1px var(--line);font:14px/1.45 system-ui,sans-serif}#ets-tech-feedback-annotations-clear:not([open]){display:none!important}#ets-tech-feedback-annotations-clear[open]{animation:ets-tech-feedback-annotations-in .15s ease-out}@keyframes ets-tech-feedback-annotations-in{from{opacity:0;transform:scale(.85)}}#ets-tech-feedback-annotations-clear::backdrop{background:rgba(0,0,0,.5)}#ets-tech-feedback-annotations-clear form{padding:20px}#ets-tech-feedback-annotations-clear h2{margin:0 0 8px;font-size:16px}#ets-tech-feedback-annotations-clear p{margin:0 0 18px}#ets-tech-feedback-annotations-clear .actions{display:flex;justify-content:flex-end;gap:8px}'
-		+ '#ets-tech-feedback-annotations-clear button{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:.5rem;background:transparent;color:var(--fg);font:inherit;cursor:pointer}#ets-tech-feedback-annotations-clear button:hover{background:var(--hover)}#ets-tech-feedback-annotations-clear button.danger{border-color:#ef4444;background:#ef4444;color:#fff}'
+		+ '#ets-tech-feedback-annotations-clear button{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:.5rem;background:transparent;color:var(--fg);font:inherit;cursor:pointer}#ets-tech-feedback-annotations-clear button:hover{background:var(--hover)}#ets-tech-feedback-annotations-clear button.danger{border-color:#ef4444;background:#ef4444;color:#fff}#ets-tech-feedback-annotations-clear button[hidden]{display:none}#ets-tech-feedback-annotations-all button:disabled,#ets-tech-feedback-annotations-clear button:disabled{opacity:.6;cursor:default}'
 		+ '@media (prefers-reduced-motion:reduce){#ets-tech-feedback-annotations-all,#ets-tech-feedback-annotations-all .menu,#ets-tech-feedback-annotations-all .menu button{transition:none!important}#ets-tech-feedback-annotations-clear[open]{animation:none}}';
 	document.head.append( css );
 	// Lucide-style stroke icons, drawn with the text colour.
@@ -95,6 +105,7 @@ function sendButton() {
 		copy: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
 		check: '<path d="M20 6 9 17l-5-5"/>',
 		trash: '<path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+		upload: '<path d="M12 13v8"/><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="m8 17 4-4 4 4"/>',
 	};
 	const setLabel = ( b, icon, text ) => { b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[ icon ] + '</svg>'; b.append( text ); };
 	const main = document.createElement( 'button' );
@@ -120,7 +131,7 @@ function sendButton() {
 		const text = 1 === n ? 'Send 1 Feedback' : 'Send All ' + n + ' Feedbacks';
 		main.children[ 1 ].textContent = text;
 	};
-	// App and Environment once, then one "Page Feedback" section per path + query with its notes in Agentation's forensic layout.
+	// App and Environment once, then one "Page Feedback" section per path + query + fragment with its notes in Agentation's forensic layout.
 	const report = () => [
 		'**App:** ' + APP,
 		'',
@@ -134,6 +145,44 @@ function sendButton() {
 		'---',
 		...lists().flatMap( ( [ path, list ] ) => [ '', '## Page Feedback: ' + path, '', ...list.map( ( a, i ) => forensic( a, i ) + '\n' ) ] ),
 	].join( '\n' ).trim();
+	// One self-contained object per note, so the server can upsert each by hash; deleted notes go as stubs with deleted: true.
+	// Agentation's own fields go under agentation, so they never clash with ours (it has an optional url too).
+	// clearing marks every note deleted. Returns the failure label, or nothing once the server answered 2xx.
+	const post = async ( clearing ) => {
+		const now = new Date().toISOString(), live = lists().flatMap( ( [ url, list ] ) => list.map( ( a ) => ( { url, a } ) ) );
+		try {
+			const device = deviceId(), hash = ( id ) => sha256( APP + location.origin + device + id );
+			const gone = { ...load( DELETED ), ...( clearing && Object.fromEntries( live.map( ( { a } ) => [ a.id, now ] ) ) ) };
+			const body = await Promise.all( [
+				...( clearing ? [] : live ).map( async ( { url, a } ) => {
+					const u = new URL( url, location.origin );
+					return {
+						hash: await hash( a.id ), deleted: false, app: APP, deviceId: device, origin: location.origin,
+						url: u.href, path: u.pathname, query: u.search, fragment: u.hash,
+						userAgent: navigator.userAgent, viewport: innerWidth + '×' + innerHeight, devicePixelRatio, sentAt: now, agentation: a,
+					};
+				} ),
+				...Object.entries( gone ).map( async ( [ id, deletedAt ] ) => ( { hash: await hash( id ), deleted: true, app: APP, deviceId: device, deletedAt, agentation: { id } } ) ),
+			] );
+			const res = await fetch( POST_URL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', ...( TOKEN && { Authorization: 'Bearer ' + TOKEN } ) },
+				body: JSON.stringify( body ),
+				credentials: 'omit',
+				signal: AbortSignal.timeout( 15000 ),
+			} );
+			if ( ! res.ok ) {
+				console.error( 'Feedback post failed:', res.status, await res.text() );
+				return 'Failed (' + res.status + ')';
+			}
+			localStorage.removeItem( DELETED );
+			localStorage.setItem( POSTED, JSON.stringify( Object.fromEntries( live.map( ( { a } ) => [ a.id, a.comment ] ) ) ) );
+		} catch ( e ) {
+			console.error( 'Feedback post failed:', e );
+			return 'Failed';
+		}
+	};
+	const unposted = () => { const sent = load( POSTED ); return lists().reduce( ( n, [ , l ] ) => n + l.filter( ( a ) => sent[ a.id ] !== a.comment ).length, 0 ); };
 	const copyText = async ( text ) => {
 		try { await navigator.clipboard.writeText( text ); } catch ( e ) { // https only; the dev site may be http.
 			const t = Object.assign( document.createElement( 'textarea' ), { value: text } );
@@ -152,6 +201,18 @@ function sendButton() {
 		b.onclick = () => { setOpen( false ); window.open( href( report() ), '_blank', 'noopener' ); };
 		menu.append( b );
 	} );
+	if ( POST_URL ) {
+		const up = document.createElement( 'button' );
+		setLabel( up, 'upload', POST_LABEL );
+		up.onclick = async () => {
+			up.disabled = true;
+			setLabel( up, 'upload', 'Sending…' );
+			const failed = await post();
+			setLabel( up, failed ? 'upload' : 'check', failed || 'Sent' );
+			setTimeout( () => { up.disabled = false; setLabel( up, 'upload', POST_LABEL ); if ( ! failed ) setOpen( false ); }, failed ? 2000 : 1000 );
+		};
+		menu.append( up );
+	}
 	const cp = document.createElement( 'button' );
 	setLabel( cp, 'copy', 'Copy' );
 	cp.onclick = async () => {
@@ -165,22 +226,40 @@ function sendButton() {
 	clear.className = 'danger';
 	setLabel( clear, 'trash', 'Clear all' );
 	// Reloads after: Agentation holds this page's notes in memory and would save them back on its next change.
+	// With post_url, it first posts every note as deleted and clears nothing unless the server answers 2xx.
 	// A modal rather than confirm(): focus starts on Cancel, so Enter, Escape and a click outside all cancel; only a click on the red button clears.
 	const dlg = document.createElement( 'dialog' );
 	dlg.dataset.feedbackToolbar = '';
 	dlg.id = 'ets-tech-feedback-annotations-clear';
-	dlg.innerHTML = '<form method="dialog"><h2>Clear all feedback?</h2><p></p><div class="actions"><button value="cancel" autofocus>Cancel</button><button value="clear" class="danger"></button></div></form>';
-	setLabel( dlg.querySelector( '.danger' ), 'trash', 'Clear all' );
+	dlg.innerHTML = '<form method="dialog"><h2>Clear all feedback?</h2><p></p><div class="actions"><button value="cancel" autofocus>Cancel</button><button value="post" hidden></button><button value="clear" class="danger"></button></div></form>';
+	const LABELS = { post: [ 'upload', POST_LABEL, 'Sending…' ], clear: [ 'trash', 'Clear all', 'Clearing…' ] };
+	const [ , dlgPost, dlgClear ] = dlg.querySelectorAll( 'button' );
 	dlg.onclick = ( e ) => { if ( e.target === dlg ) dlg.close(); }; // The backdrop.
-	dlg.onclose = () => {
-		if ( 'clear' !== dlg.returnValue ) return;
-		Object.keys( localStorage ).filter( ( k ) => k.startsWith( PREFIX ) || k === URLS ).forEach( ( k ) => localStorage.removeItem( k ) );
+	const wipe = () => {
+		Object.keys( localStorage ).filter( ( k ) => k.startsWith( PREFIX ) || [ URLS, DELETED, POSTED ].includes( k ) ).forEach( ( k ) => localStorage.removeItem( k ) );
 		location.reload();
+	};
+	dlg.onclose = () => { if ( 'clear' === dlg.returnValue ) wipe(); };
+	dlg.querySelector( 'form' ).onsubmit = async ( e ) => {
+		const b = e.submitter;
+		if ( ! POST_URL || ! LABELS[ b?.value ] ) return;
+		e.preventDefault();
+		const [ icon, text, busy ] = LABELS[ b.value ];
+		b.disabled = true;
+		setLabel( b, icon, busy );
+		const failed = await post( 'clear' === b.value );
+		if ( ! failed ) return 'clear' === b.value ? wipe() : dlg.close();
+		setLabel( b, icon, failed );
+		setTimeout( () => { b.disabled = false; setLabel( b, icon, text ); }, 2000 );
 	};
 	document.body.append( dlg );
 	clear.onclick = () => {
 		setOpen( false );
-		dlg.querySelector( 'p' ).textContent = 'This removes all ' + count() + ' feedback on every page. It cannot be undone.';
+		const n = POST_URL ? unposted() : 0;
+		dlg.querySelector( 'p' ).textContent = 'This removes all ' + count() + ' feedback on every page. It cannot be undone.'
+			+ ( n ? ' ' + n + ' feedback ' + ( 1 === n ? 'hasn\'t' : 'haven\'t' ) + ' been posted to the server yet.' : '' );
+		dlgPost.hidden = ! n;
+		Object.entries( LABELS ).forEach( ( [ v, [ icon, text ] ] ) => { const b = 'post' === v ? dlgPost : dlgClear; b.disabled = false; setLabel( b, icon, text ); } );
 		dlg.returnValue = '';
 		dlg.showModal();
 	};
@@ -199,4 +278,51 @@ function sendButton() {
 	label();
 	setInterval( label, 1000 ); // Same-tab localStorage writes fire no event.
 	document.body.append( all );
+}
+
+// A random id per browser, so two testers' notes made in the same millisecond still hash apart.
+function deviceId() {
+	let id = localStorage.getItem( DEVICE );
+	// randomUUID is https-only; getRandomValues works on http too.
+	if ( ! id ) localStorage.setItem( DEVICE, id = crypto.randomUUID?.() || [ ...crypto.getRandomValues( new Uint8Array( 16 ) ) ].map( ( b ) => b.toString( 16 ).padStart( 2, '0' ) ).join( '' ) );
+	return id;
+}
+
+// Hex SHA-256. crypto.subtle exists only on https and localhost, so http dev sites use the plain-JS version below.
+async function sha256( text ) {
+	const bytes = new TextEncoder().encode( text );
+	if ( ! crypto.subtle ) return sha256js( bytes );
+	return [ ...new Uint8Array( await crypto.subtle.digest( 'SHA-256', bytes ) ) ].map( ( b ) => b.toString( 16 ).padStart( 2, '0' ) ).join( '' );
+}
+
+function sha256js( bytes ) {
+	const r = ( x, n ) => ( x >>> n ) | ( x << ( 32 - n ) ), K = [];
+	let H = [];
+	// Fractional parts of the square and cube roots of the first primes, per the spec.
+	for ( let n = 2; K.length < 64; n++ ) {
+		let prime = true;
+		for ( let d = 2; d * d <= n; d++ ) if ( n % d === 0 ) prime = false;
+		if ( ! prime ) continue;
+		if ( H.length < 8 ) H.push( ( n ** ( 1 / 2 ) % 1 ) * 2 ** 32 | 0 );
+		K.push( ( n ** ( 1 / 3 ) % 1 ) * 2 ** 32 | 0 );
+	}
+	const size = ( ( bytes.length + 72 ) >> 6 ) << 6, m = new Uint8Array( size ), dv = new DataView( m.buffer ), w = [];
+	m.set( bytes );
+	m[ bytes.length ] = 0x80;
+	dv.setUint32( size - 4, bytes.length * 8 ); // Inputs here are tiny, so the length's high word stays 0.
+	for ( let i = 0; i < size; i += 64 ) {
+		let [ a, b, c, d, e, f, g, h ] = H;
+		for ( let j = 0; j < 64; j++ ) {
+			if ( j < 16 ) w[ j ] = dv.getUint32( i + j * 4 );
+			else {
+				const x = w[ j - 15 ], y = w[ j - 2 ];
+				w[ j ] = ( ( r( x, 7 ) ^ r( x, 18 ) ^ ( x >>> 3 ) ) + w[ j - 16 ] + ( r( y, 17 ) ^ r( y, 19 ) ^ ( y >>> 10 ) ) + w[ j - 7 ] ) | 0;
+			}
+			const t1 = ( h + ( r( e, 6 ) ^ r( e, 11 ) ^ r( e, 25 ) ) + ( ( e & f ) ^ ( ~e & g ) ) + K[ j ] + w[ j ] ) | 0;
+			const t2 = ( ( r( a, 2 ) ^ r( a, 13 ) ^ r( a, 22 ) ) + ( ( a & b ) ^ ( a & c ) ^ ( b & c ) ) ) | 0;
+			[ h, g, f, e, d, c, b, a ] = [ g, f, e, ( d + t1 ) | 0, c, b, a, ( t1 + t2 ) | 0 ];
+		}
+		H = H.map( ( v, k ) => ( v + [ a, b, c, d, e, f, g, h ][ k ] ) | 0 );
+	}
+	return H.map( ( v ) => ( v >>> 0 ).toString( 16 ).padStart( 8, '0' ) ).join( '' );
 }

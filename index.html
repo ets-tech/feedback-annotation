@@ -48,6 +48,7 @@ p code, li code, td code { padding: 1px 5px; border-radius: 4px; background: var
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { padding: 10px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 tr:last-child td { border-bottom: 0; }
+.table + p { margin-top: 12px; }
 th { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 /* Phones: one block per parameter instead of three squeezed columns. */
 @media (max-width: 560px) {
@@ -55,7 +56,7 @@ th { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .04
 	tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--line); }
 	tr:last-child { border-bottom: 0; }
 	td { display: block; padding: 3px 14px; border: 0; }
-	td:last-child::before { content: "Default: "; color: var(--muted); }
+	#parameters td:last-child::before { content: "Default: "; color: var(--muted); }
 }
 ul.facts { margin: 0; padding-left: 20px; }
 ul.facts li { margin-bottom: 8px; }
@@ -110,6 +111,9 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 					<tr><td><code>app</code></td><td>Name in the report header, the email subject and Agentation</td><td><code>TestApp</code></td></tr>
 					<tr><td><code>hide</code></td><td>Share channels to remove, comma separated: <code>whatsapp</code>, <code>telegram</code>, <code>email</code>. Copy and Clear all always show.</td><td>none</td></tr>
 					<tr><td><code>hide_all_feedback_button</code></td><td><code>true</code> removes the tab; Agentation stays</td><td><code>false</code></td></tr>
+					<tr><td><code>post_url</code></td><td>Adds <strong>Post to server</strong> to the drawer, which sends every note as JSON to this URL. URL-encode it. See <a href="#post">Post to server</a>.</td><td>not set</td></tr>
+					<tr><td><code>post_token</code></td><td>Sent as <code>Authorization: Bearer &lt;token&gt;</code> with each post</td><td>not set</td></tr>
+					<tr><td><code>post_label</code></td><td>Label of the post button in the drawer and the Clear all dialog</td><td><code>Post to server</code></td></tr>
 				</tbody>
 			</table>
 		</div>
@@ -117,11 +121,79 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 &lt;script type="module" src="https://cdn.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.min.js?app=MyApp&amp;hide=whatsapp,telegram"&gt;&lt;/script&gt;</code></pre><button class="copy" type="button">Copy</button></div>
 	</section>
 
+	<section id="post">
+		<h2>Post to server</h2>
+		<p>Set <code>post_url</code> and the drawer gets a <strong>Post to server</strong> button. It sends one <code>POST</code> with a JSON array: every note on every page, plus the notes deleted since the last successful post. Notes stay in the browser afterwards, so posting again re-sends them.</p>
+		<div class="code"><pre><code>&lt;script type="module" src="https://cdn.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.min.js?app=MyApp&amp;post_url=https%3A%2F%2Fapi.example.com%2Ffeedback&amp;post_token=abc123"&gt;&lt;/script&gt;</code></pre><button class="copy" type="button">Copy</button></div>
+		<div class="code"><pre><code>[
+  {
+    "hash": "3b7aad47…",
+    "deleted": false,
+    "app": "MyApp",
+    "deviceId": "e8c79f40-0b4e-4847-b5b7-f09ef45e5732",
+    "origin": "https://staging.example.com",
+    "url": "https://staging.example.com/orders?date=2026-10-01#tab=2",
+    "path": "/orders",
+    "query": "?date=2026-10-01",
+    "fragment": "#tab=2",
+    "userAgent": "Mozilla/5.0 …",
+    "viewport": "1440×900",
+    "devicePixelRatio": 2,
+    "sentAt": "2026-10-26T10:00:00.000Z",
+    "agentation": {
+      "id": "1793012632233",
+      "comment": "Make the heading bigger",
+      "element": "h1",
+      "elementPath": "body &gt; h1",
+      "timestamp": 1793012632233,
+      "…": "the other Agentation fields below"
+    }
+  },
+  { "hash": "9c1e…", "deleted": true, "app": "MyApp", "deviceId": "e8c79f40-…", "deletedAt": "2026-10-26T09:58:12.000Z", "agentation": { "id": "1793000000000" } }
+]</code></pre><button class="copy" type="button">Copy</button></div>
+		<ul class="facts">
+			<li><code>hash</code> is the SHA-256 of <code>app + origin + deviceId + agentation.id</code>. It stays the same when a note is edited, so upsert by <code>hash</code>. <code>deviceId</code> is a random id kept per browser, so two testers' notes never share a hash.</li>
+			<li><code>deleted: true</code> items are notes the tester deleted. The server decides what to do with them; a hash it has never seen can be ignored.</li>
+			<li><strong>Clear all</strong> first posts every note as deleted and clears nothing unless the server answers 2xx. If some notes were never posted, or were edited since, the dialog says so and offers <strong>Post to server</strong>.</li>
+			<li>Any 2xx is success. A failure shows "Failed (status)" and logs the status and response body to the console.</li>
+		</ul>
+		<h3>Fields</h3>
+		<p>Headers: <code>Content-Type: application/json</code>, plus <code>Authorization: Bearer &lt;token&gt;</code> when <code>post_token</code> is set. Optional Agentation fields are left out when empty, never sent as <code>null</code>.</p>
+		<div class="table">
+			<table>
+				<thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+				<tbody>
+					<tr><td><code>hash</code></td><td>SHA-256 hex of <code>app + origin + deviceId + agentation.id</code>; the upsert key</td></tr>
+					<tr><td><code>deleted</code></td><td><code>false</code> for a live note</td></tr>
+					<tr><td><code>app</code>, <code>deviceId</code>, <code>origin</code></td><td>The <code>app</code> parameter, a random id kept per browser, and the site's origin</td></tr>
+					<tr><td><code>url</code></td><td>Full address of the page the note was made on, with query and fragment</td></tr>
+					<tr><td><code>path</code>, <code>query</code>, <code>fragment</code></td><td>Its parts: <code>/orders</code>, <code>?date=2026-10-01</code> (or empty), <code>#/orders/42</code> on hash-routed apps (or empty)</td></tr>
+					<tr><td><code>userAgent</code>, <code>viewport</code>, <code>devicePixelRatio</code>, <code>sentAt</code></td><td>Browser, <code>width×height</code>, pixel ratio and ISO time, all at send time</td></tr>
+					<tr><td><code>agentation</code></td><td>The note exactly as Agentation stores it. Its fields follow.</td></tr>
+					<tr><td><code>agentation.id</code>, <code>.timestamp</code></td><td>Agentation's creation time in ms (string and number). <code>id</code> is unique only per browser, hence <code>hash</code>.</td></tr>
+					<tr><td><code>comment</code></td><td>The tester's feedback</td></tr>
+					<tr><td><code>element</code>, <code>elementPath</code>, <code>fullPath</code></td><td>Readable element name, short CSS path, full DOM path</td></tr>
+					<tr><td><code>x</code>, <code>y</code>, <code>boundingBox</code></td><td>Marker at % from left and px from top; element box <code>{x, y, width, height}</code></td></tr>
+					<tr><td><code>selectedText</code>, <code>nearbyText</code></td><td>Text selected, or text near the element</td></tr>
+					<tr><td><code>cssClasses</code>, <code>computedStyles</code>, <code>accessibility</code>, <code>nearbyElements</code>, <code>attributes</code></td><td>Element details</td></tr>
+					<tr><td><code>reactComponents</code>, <code>sourceFile</code></td><td>React component tree and source file, when detectable</td></tr>
+					<tr><td><code>isMultiSelect</code>, <code>elementBoundingBoxes</code>, <code>isFixed</code>, <code>frame</code></td><td>Multi-select and its boxes; position-fixed element; iframe path for notes inside an iframe</td></tr>
+					<tr><td><code>kind</code>, <code>placement</code>, <code>rearrange</code>, <code>drawingIndex</code></td><td><code>feedback</code>, <code>placement</code> or <code>rearrange</code>, with details for layout notes and drawings</td></tr>
+					<tr><td><code>intent</code>, <code>severity</code>, <code>status</code>, <code>thread</code></td><td><code>fix</code>/<code>change</code>/<code>question</code>/<code>approve</code>; <code>blocking</code>/<code>important</code>/<code>suggestion</code>; <code>pending</code>/<code>acknowledged</code>/<code>resolved</code>/<code>dismissed</code>; replies</td></tr>
+					<tr><td><code>url</code>, <code>createdAt</code>, <code>updatedAt</code>, <code>resolvedAt</code>, <code>resolvedBy</code>, <code>authorId</code>, <code>sessionId</code></td><td>Agentation's sync metadata, when present. For the page, use the top-level <code>url</code>.</td></tr>
+				</tbody>
+			</table>
+		</div>
+		<p>A deleted note carries only <code>hash</code>, <code>deleted: true</code>, <code>app</code>, <code>deviceId</code>, <code>deletedAt</code> and <code>agentation: { id }</code>.</p>
+		<p><strong>The server must</strong> answer the CORS preflight (<code>Access-Control-Allow-Origin</code> for the site and <code>Access-Control-Allow-Headers: Authorization, Content-Type</code>; no cookies are sent) and check the <code>Origin</code> header against the sites it expects.</p>
+		<p class="note">The token sits in the page's HTML, so anyone who can open the page can read it. Make it write-only and good for this endpoint alone.</p>
+	</section>
+
 	<section id="how">
 		<h2>How it works</h2>
 		<ul class="facts">
-			<li>Notes stay in the tester's own browser. Nothing is sent anywhere until they share or copy the report.</li>
-			<li>The report covers every page of the app, grouped by page address, in Agentation's detailed "forensic" format.</li>
+			<li>Notes stay in the tester's own browser. Nothing is sent anywhere until they share, copy or post the report.</li>
+			<li>The report covers every page of the app, grouped by page address (path, query and <code>#</code> part), in Agentation's detailed "forensic" format.</li>
 			<li><strong>Clear all</strong> removes every note on every page, after a confirmation.</li>
 			<li>The tab follows Agentation's light and dark theme.</li>
 			<li>Loads React 19.3.0 and Agentation 3.1.2 from esm.sh; this script itself comes from jsDelivr.</li>
