@@ -3,7 +3,8 @@
 // esm.sh pins one React for all three imports; two copies (Agentation's and react-dom's) would crash its hooks.
 import React from 'https://esm.sh/react@19.3.0';
 import { createRoot } from 'https://esm.sh/react-dom@19.3.0/client?deps=react@19.3.0';
-import { Agentation } from 'https://esm.sh/agentation@3?deps=react@19.3.0,react-dom@19.3.0';
+// Exact version: this file relies on Agentation's storage keys and data-feedback-toolbar, which a minor release could change.
+import { Agentation } from 'https://esm.sh/agentation@3.1.2?deps=react@19.3.0,react-dom@19.3.0';
 
 // Settings come from this script's own URL.
 const params = new URL( import.meta.url ).searchParams;

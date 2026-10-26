@@ -14,6 +14,12 @@ Add one tag to the page. It must be `type="module"`.
 
 `@1` gets every 1.x release automatically and never a breaking 2.0.
 
+For the minified file, ask for `feedback-annotation.min.js` instead; jsDelivr minifies it on the fly, and the parameters work the same:
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.min.js?app=MyApp"></script>
+```
+
 ## Parameters
 
 Add them to the script URL.
@@ -34,7 +40,7 @@ Add them to the script URL.
 
 ## How it works
 
-- Loads React 19.3.0 and Agentation 3.x from [esm.sh](https://esm.sh), with one React shared by both. Agentation updates within 3.x automatically.
+- Loads React 19.3.0 and Agentation 3.1.2 from [esm.sh](https://esm.sh), with one React shared by both. Both are exact versions; upgrading Agentation means changing its version in `feedback-annotation.js`, testing, and releasing.
 - Notes stay in each tester's browser (`localStorage`); nothing is sent anywhere until the tester shares or copies the report.
 - The tab and drawer follow Agentation's light/dark theme toggle.
 - Run the demo locally with any static server, e.g. `python3 -m http.server`, then open `index.html`.
@@ -47,5 +53,6 @@ Add them to the script URL.
    git push origin v1.0.1
    ```
    Use a patch or minor bump for fixes and new options. Only bump to `v2.0.0` for a breaking change; apps on `@1` won't get it.
-2. jsDelivr caches what `@1` points to. Open this once so apps get the new version straight away:
-   https://purge.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.js
+2. jsDelivr caches what `@1` points to. Open both once so apps get the new version straight away:
+   - https://purge.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.js
+   - https://purge.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.min.js
