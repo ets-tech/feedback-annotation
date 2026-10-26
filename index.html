@@ -4,8 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Feedback Annotation</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231c1c1c'/%3E%3Cpath d='M9 11h14M9 16h10M9 21h6' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
 <meta name="description" content="Agentation plus a Send All Feedbacks tab: annotate any page, then share every note in one report.">
 <script type="module" src="https://cdn.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.min.js?app=TestApp"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@8.6.0/minified/introjs.min.css">
 <style>
 :root {
 	--bg: #fafafa; --surface: #fff; --text: #1a1a1a; --muted: #5f5f5f; --line: #e6e6e6;
@@ -22,8 +24,9 @@ header { margin-bottom: 48px; }
 h1 { margin: 0 0 12px; font-size: clamp(32px, 6vw, 44px); line-height: 1.1; letter-spacing: -.02em; }
 .lede { margin: 0 0 20px; color: var(--muted); font-size: 18px; }
 .links { display: flex; flex-wrap: wrap; gap: 10px; }
-.links a { padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 14px; font-weight: 600; text-decoration: none; }
-.links a:hover { border-color: var(--muted); }
+.links a, .links button { padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font: 600 14px system-ui, sans-serif; text-decoration: none; cursor: pointer; }
+.links a:hover, .links button:hover { border-color: var(--muted); }
+.links .primary { border-color: var(--text); background: var(--text); color: var(--bg); }
 section { margin-top: 48px; }
 h2 { margin: 0 0 12px; font-size: 22px; letter-spacing: -.01em; }
 p { margin: 0 0 12px; }
@@ -57,6 +60,8 @@ th { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .04
 ul.facts { margin: 0; padding-left: 20px; }
 ul.facts li { margin-bottom: 8px; }
 .note { padding: 12px 16px; border-left: 3px solid var(--danger); border-radius: 0 8px 8px 0; background: var(--surface); color: var(--muted); font-size: 14px; }
+/* Intro.js centres element-less steps on the page, not the screen, so mid-tour they land off-screen after scrolling. */
+.introjs-tooltip.introjs-floating { position: fixed !important; }
 footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
 </style>
 </head>
@@ -67,6 +72,7 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 		<h1>Feedback Annotation</h1>
 		<p class="lede">Point at anything on a page, say what should change, and send every note from every page as one report. Built on <a href="https://www.npmjs.com/package/agentation">Agentation</a>, added with one script tag.</p>
 		<div class="links">
+			<button type="button" class="primary" id="tour">Take the tour</button>
 			<a href="#install">Add it to an app</a>
 			<a href="https://github.com/ets-tech/feedback-annotation">GitHub repo</a>
 		</div>
@@ -126,12 +132,47 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 		Maintained by ETS Tech · <a href="https://github.com/ets-tech/feedback-annotation">Source and release notes</a>
 	</footer>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/intro.js@8.6.0/minified/intro.min.js"></script>
 <script>
 // Copy buttons on the code samples.
 document.querySelectorAll( '.copy' ).forEach( ( b ) => b.addEventListener( 'click', async () => {
 	try { await navigator.clipboard.writeText( b.previousElementSibling.textContent ); b.textContent = 'Copied'; } catch ( e ) { b.textContent = 'Press Ctrl+C'; }
 	setTimeout( () => { b.textContent = 'Copy'; }, 1500 );
 } ) );
+
+// Guided tour (Intro.js). Steps are built when it starts, so it can point at the Agentation button and the Send tab once they exist;
+// both are fixed to the screen, so their steps don't scroll the page.
+const TOUR_SEEN = 'feedback-annotation-demo-tour-seen';
+const agentationButton = () => document.querySelector( 'agentation-toolbar' )?.shadowRoot?.querySelector( '[class*="toolbarContainer"]' );
+const sendTab = () => document.querySelector( '#ets-tech-feedback-annotations-all.shown .tab' );
+const tour = () => introJs.tour().setOptions( {
+	steps: [
+		{ title: 'Feedback Annotation', intro: 'Leave notes on any part of a page, then send every note from every page as one report. This takes under a minute.' },
+		{ element: agentationButton(), scrollTo: 'off', title: 'Start annotating', intro: 'Click this button to turn annotation on. Click it again to turn it off.' },
+		{ element: document.querySelector( '.samples .card' ), title: 'Leave a note', intro: 'With annotation on, click anything, like this card, type what should change and press <b>Add</b>.' },
+		{ element: sendTab(), scrollTo: 'off', position: 'left', title: 'Send them all', intro: ( sendTab() ? 'This tab holds your notes.' : 'Once there is a note, a <b>Send Feedback</b> tab appears on the right edge.' ) + ' Open it to share by WhatsApp, Telegram or Email, copy the report, or clear everything.' },
+		{ element: document.querySelector( '#install .code' ), title: 'Add it to your app', intro: 'Paste this one tag into the app\'s HTML. Use it on dev and staging only.' },
+		{ element: document.querySelector( '#parameters .table' ), title: 'Configure it', intro: 'Set the app name, hide share channels, or hide the tab, all from the script URL.' },
+	].map( ( s ) => s.element ? s : { title: s.title, intro: s.intro } ), // Missing elements become centred steps.
+	showProgress: true,
+	scrollTo: 'tooltip', // On phones the tooltip often sits above the element; scrolling to the element alone pushes it off-screen.
+	exitOnOverlayClick: false,
+	nextLabel: 'Next',
+	prevLabel: 'Back',
+	doneLabel: 'Done',
+} ).start();
+document.getElementById( 'tour' ).addEventListener( 'click', tour );
+// First visit: wait up to 5s for Agentation to load from the CDN, then start.
+try {
+	if ( ! localStorage.getItem( TOUR_SEEN ) ) {
+		localStorage.setItem( TOUR_SEEN, '1' );
+		let waited = 0;
+		const wait = setInterval( () => {
+			waited += 200;
+			if ( agentationButton() || waited >= 5000 ) { clearInterval( wait ); tour(); }
+		}, 200 );
+	}
+} catch ( e ) {}
 </script>
 </body>
 </html>
