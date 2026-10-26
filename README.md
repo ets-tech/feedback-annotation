@@ -4,6 +4,8 @@
 
 For internal dev and staging sites only. Don't ship the tag to production.
 
+**Demo:** https://ets-tech.github.io/feedback-annotation/
+
 ## Use
 
 Add one tag to the page. It must be `type="module"`.
