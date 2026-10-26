@@ -1,12 +1,137 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TestApp</title>
+<title>Feedback Annotation</title>
+<meta name="description" content="Agentation plus a Send All Feedbacks tab: annotate any page, then share every note in one report.">
 <script type="module" src="https://cdn.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.min.js?app=TestApp"></script>
+<style>
+:root {
+	--bg: #fafafa; --surface: #fff; --text: #1a1a1a; --muted: #5f5f5f; --line: #e6e6e6;
+	--code-bg: #1c1c1c; --code-text: rgba(255,255,255,.88); --accent: #3c82f7; --danger: #ef4444;
+}
+@media (prefers-color-scheme: dark) {
+	:root { --bg: #111; --surface: #1a1a1a; --text: rgba(255,255,255,.9); --muted: rgba(255,255,255,.6); --line: rgba(255,255,255,.1); --code-bg: #0b0b0b; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 56px 20px 96px; }
+header { margin-bottom: 48px; }
+.eyebrow { margin: 0 0 8px; color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+h1 { margin: 0 0 12px; font-size: clamp(32px, 6vw, 44px); line-height: 1.1; letter-spacing: -.02em; }
+.lede { margin: 0 0 20px; color: var(--muted); font-size: 18px; }
+.links { display: flex; flex-wrap: wrap; gap: 10px; }
+.links a { padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 14px; font-weight: 600; text-decoration: none; }
+.links a:hover { border-color: var(--muted); }
+section { margin-top: 48px; }
+h2 { margin: 0 0 12px; font-size: 22px; letter-spacing: -.01em; }
+p { margin: 0 0 12px; }
+a { color: var(--accent); }
+ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 10px; }
+ol.steps li { counter-increment: step; display: flex; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+ol.steps li::before { content: counter(step); flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 13px; font-weight: 700; }
+.samples { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+.card { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.card h3 { margin: 0 0 6px; font-size: 16px; }
+.card p { margin: 0; color: var(--muted); font-size: 14px; }
+.card button { margin-top: 12px; padding: 6px 12px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+.code { position: relative; margin: 12px 0; }
+pre { margin: 0; padding: 16px 76px 16px 16px; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 12px; background: var(--code-bg); color: var(--code-text); font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.copy { position: absolute; top: 8px; right: 8px; padding: 4px 10px; border: 1px solid rgba(255,255,255,.15); border-radius: 6px; background: #2a2a2a; color: rgba(255,255,255,.85); font: 600 12px system-ui, sans-serif; cursor: pointer; }
+code { font: .9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+p code, li code, td code { padding: 1px 5px; border-radius: 4px; background: var(--line); }
+.table { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 10px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+/* Phones: one block per parameter instead of three squeezed columns. */
+@media (max-width: 560px) {
+	thead { display: none; }
+	tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--line); }
+	tr:last-child { border-bottom: 0; }
+	td { display: block; padding: 3px 14px; border: 0; }
+	td:last-child::before { content: "Default: "; color: var(--muted); }
+}
+ul.facts { margin: 0; padding-left: 20px; }
+ul.facts li { margin-bottom: 8px; }
+.note { padding: 12px 16px; border-left: 3px solid var(--danger); border-radius: 0 8px 8px 0; background: var(--surface); color: var(--muted); font-size: 14px; }
+footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+</style>
 </head>
 <body>
-<h1>TestApp</h1>
+<main>
+	<header>
+		<p class="eyebrow">ETS Tech · internal tool</p>
+		<h1>Feedback Annotation</h1>
+		<p class="lede">Point at anything on a page, say what should change, and send every note from every page as one report. Built on <a href="https://www.npmjs.com/package/agentation">Agentation</a>, added with one script tag.</p>
+		<div class="links">
+			<a href="#install">Add it to an app</a>
+			<a href="https://github.com/ets-tech/feedback-annotation">GitHub repo</a>
+		</div>
+	</header>
+
+	<section id="try">
+		<h2>Try it on this page</h2>
+		<ol class="steps">
+			<li><span>Click the round Agentation button in the bottom-right corner to start annotating.</span></li>
+			<li><span>Click anything on this page, such as a card below, type what should change and press <strong>Add</strong>.</span></li>
+			<li><span>A <strong>Send 1 Feedback</strong> tab appears on the right edge. Open it to share the report by WhatsApp, Telegram or Email, or copy it.</span></li>
+		</ol>
+		<div class="samples">
+			<div class="card"><h3>Pricing</h3><p>Plans start at ₹499 a month, billed yearly.</p><button type="button">Choose plan</button></div>
+			<div class="card"><h3>Sign up</h3><p>Create an account in under a minute with your school email.</p><button type="button">Get started</button></div>
+			<div class="card"><h3>Support</h3><p>Our team replies within one working day.</p><button type="button">Contact us</button></div>
+		</div>
+	</section>
+
+	<section id="install">
+		<h2>Add it to an app</h2>
+		<p>Paste one tag into the page's HTML. It must be <code>type="module"</code>.</p>
+		<div class="code"><pre><code>&lt;script type="module" src="https://cdn.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.min.js?app=MyApp"&gt;&lt;/script&gt;</code></pre><button class="copy" type="button">Copy</button></div>
+		<p><code>@1</code> picks up every 1.x fix automatically and never a breaking 2.0. Drop <code>.min</code> from the file name for the readable version.</p>
+		<p class="note">For dev and staging only. Don't ship the tag to production.</p>
+	</section>
+
+	<section id="parameters">
+		<h2>Parameters</h2>
+		<p>Add them to the script URL.</p>
+		<div class="table">
+			<table>
+				<thead><tr><th>Parameter</th><th>Effect</th><th>Default</th></tr></thead>
+				<tbody>
+					<tr><td><code>app</code></td><td>Name in the report header, the email subject and Agentation</td><td><code>TestApp</code></td></tr>
+					<tr><td><code>hide</code></td><td>Share channels to remove, comma separated: <code>whatsapp</code>, <code>telegram</code>, <code>email</code>. Copy and Clear all always show.</td><td>none</td></tr>
+					<tr><td><code>hide_all_feedback_button</code></td><td><code>true</code> removes the tab; Agentation stays</td><td><code>false</code></td></tr>
+				</tbody>
+			</table>
+		</div>
+		<div class="code"><pre><code>&lt;!-- Email and Copy only --&gt;
+&lt;script type="module" src="https://cdn.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.min.js?app=MyApp&amp;hide=whatsapp,telegram"&gt;&lt;/script&gt;</code></pre><button class="copy" type="button">Copy</button></div>
+	</section>
+
+	<section id="how">
+		<h2>How it works</h2>
+		<ul class="facts">
+			<li>Notes stay in the tester's own browser. Nothing is sent anywhere until they share or copy the report.</li>
+			<li>The report covers every page of the app, grouped by page address, in Agentation's detailed "forensic" format.</li>
+			<li><strong>Clear all</strong> removes every note on every page, after a confirmation.</li>
+			<li>The tab follows Agentation's light and dark theme.</li>
+			<li>Loads React 19.3.0 and Agentation 3.1.2 from esm.sh; this script itself comes from jsDelivr.</li>
+		</ul>
+	</section>
+
+	<footer>
+		Maintained by ETS Tech · <a href="https://github.com/ets-tech/feedback-annotation">Source and release notes</a>
+	</footer>
+</main>
+<script>
+// Copy buttons on the code samples.
+document.querySelectorAll( '.copy' ).forEach( ( b ) => b.addEventListener( 'click', async () => {
+	try { await navigator.clipboard.writeText( b.previousElementSibling.textContent ); b.textContent = 'Copied'; } catch ( e ) { b.textContent = 'Press Ctrl+C'; }
+	setTimeout( () => { b.textContent = 'Copy'; }, 1500 );
+} ) );
+</script>
 </body>
 </html>
