@@ -1,6 +1,6 @@
 # feedback-annotation
 
-[Agentation](https://www.npmjs.com/package/agentation) plus a **Send All n Feedbacks** tab on the right edge of the page. Testers annotate any page with Agentation; the tab collects the notes from every page into one report and shares it by Copy, WhatsApp, Telegram or Email.
+[Agentation](https://www.npmjs.com/package/agentation) plus a **Send All n Feedbacks** tab on the right edge of the page. Testers annotate any page with Agentation; the tab collects the notes from every page into one report and shares it by Copy, Download, WhatsApp, Telegram or Email. Every note carries a session ID, such as a Jira ticket, so the feedback can be grouped.
 
 For internal dev and staging sites only. Don't ship the tag to production.
 
@@ -29,8 +29,8 @@ Add them to the script URL.
 | Parameter | Effect | Default |
 |---|---|---|
 | `app` | Name in the report header, the email subject and Agentation's app name | `TestApp` |
-| `hide` | Comma list of share channels to remove: `whatsapp`, `telegram`, `email`. Copy and Clear all always show. | nothing hidden |
-| `hide_all_feedback_button` | `true` removes the tab and drawer; Agentation's own toolbar stays | `false` |
+| `hide` | Comma list of drawer items to remove: `whatsapp`, `telegram`, `email`, `download`. Copy and Clear all always show. | nothing hidden |
+| `hide_all_feedback_button` | `true` removes the tab, drawer, session ID and download; Agentation's own toolbar stays | `false` |
 | `post_url` | Adds **Post to server** to the drawer, which POSTs every note as JSON to this URL. URL-encode it. | not set |
 | `post_token` | Sent as `Authorization: Bearer <token>` with each post | not set |
 | `post_label` | Label of the post button in the drawer and the Clear all dialog | `Post to server` |
@@ -42,6 +42,32 @@ Add them to the script URL.
 <!-- Agentation only, no tab -->
 <script type="module" src="https://cdn.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.js?app=MyApp&hide_all_feedback_button=true"></script>
 ```
+
+## Session ID
+
+When the first note is added, a popup asks for a session ID: a Jira ticket, a GitHub issue, or anything else that groups this round of feedback. Left blank, or closed with Escape, it becomes `<app>-` plus 8 random hex characters, e.g. `MyApp-e8c79f40`.
+
+- One ID covers every note in the browser. Change it from **Session** at the top of the drawer and every note, old and new, takes the new one.
+- It is shown in the report's Environment block, names the downloaded file (`PROJ-123.md`) and is posted as `sessionId`.
+- **Clear all** removes it, so the next note asks again.
+
+## Report
+
+Copy, Download (a `.md` file) and the share channels all send the same Markdown:
+
+```
+I added 3 feedbacks on staging.example.com. Fix each one, then verify it in the running app:
+
+**App:** MyApp
+
+**Environment:**
+- Session ID: PROJ-123
+- Public IP: 203.0.113.7
+- Viewport: 1440×900
+…
+```
+
+The public IP is looked up from [api.ipify.org](https://www.ipify.org) once per page load, when the tab first appears. If that fails (offline, or blocked by an ad-blocker or firewall) the line reads `No Internet Connectivity`.
 
 ## Post to server
 
@@ -58,6 +84,8 @@ Add them to the script URL.
     "deleted": false,
     "app": "MyApp",
     "deviceId": "e8c79f40-0b4e-4847-b5b7-f09ef45e5732",
+    "sessionId": "PROJ-123",
+    "publicIp": "203.0.113.7",
     "origin": "https://staging.example.com",
     "url": "https://staging.example.com/orders?date=2026-10-01#tab=2",
     "path": "/orders",
@@ -76,7 +104,7 @@ Add them to the script URL.
       "…": "the other Agentation fields below"
     }
   },
-  { "hash": "9c1e…", "deleted": true, "app": "MyApp", "deviceId": "e8c79f40-…", "deletedAt": "2026-10-26T09:58:12.000Z", "agentation": { "id": "1793000000000" } }
+  { "hash": "9c1e…", "deleted": true, "app": "MyApp", "deviceId": "e8c79f40-…", "sessionId": "PROJ-123", "deletedAt": "2026-10-26T09:58:12.000Z", "agentation": { "id": "1793000000000" } }
 ]
 ```
 
@@ -97,6 +125,8 @@ Top level, added by this script:
 | `deleted` | `false` | A live note |
 | `app` | string | The `app` parameter |
 | `deviceId` | string | Random id kept per browser |
+| `sessionId` | string | The [session ID](#session-id) at send time. Changing it re-sends the same `hash` with the new ID. |
+| `publicIp` | string or `null` | The tester's public IP, or `null` when the lookup failed |
 | `origin` | string | The site's origin, e.g. `https://staging.example.com` |
 | `url` | string | Full address of the page the note was made on, with query and fragment |
 | `path` | string | Its path, e.g. `/orders` |
@@ -131,9 +161,9 @@ Inside `agentation`, from Agentation 3.1.2. Optional fields are left out when em
 | `placement`, `rearrange`, `drawingIndex` | object / number | Details for layout notes and drawings |
 | `intent`, `severity`, `status` | string | `fix`/`change`/`question`/`approve`; `blocking`/`important`/`suggestion`; `pending`/`acknowledged`/`resolved`/`dismissed` |
 | `thread` | array | `{id, role, content, timestamp}` replies |
-| `url`, `createdAt`, `updatedAt`, `resolvedAt`, `resolvedBy`, `authorId`, `sessionId` | string | Agentation's sync metadata, when present. For the page, use the top-level `url`. |
+| `url`, `createdAt`, `updatedAt`, `resolvedAt`, `resolvedBy`, `authorId`, `sessionId` | string | Agentation's sync metadata, when present. For the page, use the top-level `url`; for the session, the top-level `sessionId`. |
 
-A deleted note carries only `hash`, `deleted: true`, `app`, `deviceId`, `deletedAt` and `agentation: { id }` (ISO time it was deleted, or of the Clear all).
+A deleted note carries only `hash`, `deleted: true`, `app`, `deviceId`, `sessionId`, `deletedAt` and `agentation: { id }` (ISO time it was deleted, or of the Clear all).
 
 The server must:
 
@@ -144,7 +174,7 @@ The server must:
 ## How it works
 
 - Loads React 19.3.0 and Agentation 3.1.2 from [esm.sh](https://esm.sh), with one React shared by both. Both are exact versions; upgrading Agentation means changing its version in `feedback-annotation.js`, testing, and releasing.
-- Notes stay in each tester's browser (`localStorage`); nothing is sent anywhere until the tester shares, copies or posts the report.
+- Notes stay in each tester's browser (`localStorage`); nothing is sent anywhere until the tester shares, copies, downloads or posts the report. The one outside call is the public IP lookup to api.ipify.org.
 - The tab and drawer follow Agentation's light/dark theme toggle.
 - Run the demo locally with any static server, e.g. `python3 -m http.server`, then open `index.html`.
 

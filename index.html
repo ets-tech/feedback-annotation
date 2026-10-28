@@ -84,7 +84,7 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 		<ol class="steps">
 			<li><span>Click the round Agentation button in the bottom-right corner to start annotating.</span></li>
 			<li><span>Click anything on this page, such as a card below, type what should change and press <strong>Add</strong>.</span></li>
-			<li><span>A <strong>Send 1 Feedback</strong> tab appears on the right edge. Open it to share the report by WhatsApp, Telegram or Email, or copy it.</span></li>
+			<li><span>A <strong>Send 1 Feedback</strong> tab appears on the right edge. Open it to share the report by WhatsApp, Telegram or Email, copy it, or download it.</span></li>
 		</ol>
 		<div class="samples">
 			<div class="card"><h3>Pricing</h3><p>Plans start at ₹499 a month, billed yearly.</p><button type="button">Choose plan</button></div>
@@ -109,7 +109,7 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 				<thead><tr><th>Parameter</th><th>Effect</th><th>Default</th></tr></thead>
 				<tbody>
 					<tr><td><code>app</code></td><td>Name in the report header, the email subject and Agentation</td><td><code>TestApp</code></td></tr>
-					<tr><td><code>hide</code></td><td>Share channels to remove, comma separated: <code>whatsapp</code>, <code>telegram</code>, <code>email</code>. Copy and Clear all always show.</td><td>none</td></tr>
+					<tr><td><code>hide</code></td><td>Drawer items to remove, comma separated: <code>whatsapp</code>, <code>telegram</code>, <code>email</code>, <code>download</code>. Copy and Clear all always show.</td><td>none</td></tr>
 					<tr><td><code>hide_all_feedback_button</code></td><td><code>true</code> removes the tab; Agentation stays</td><td><code>false</code></td></tr>
 					<tr><td><code>post_url</code></td><td>Adds <strong>Post to server</strong> to the drawer, which sends every note as JSON to this URL. URL-encode it. See <a href="#post">Post to server</a>.</td><td>not set</td></tr>
 					<tr><td><code>post_token</code></td><td>Sent as <code>Authorization: Bearer &lt;token&gt;</code> with each post</td><td>not set</td></tr>
@@ -131,6 +131,8 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
     "deleted": false,
     "app": "MyApp",
     "deviceId": "e8c79f40-0b4e-4847-b5b7-f09ef45e5732",
+    "sessionId": "PROJ-123",
+    "publicIp": "203.0.113.7",
     "origin": "https://staging.example.com",
     "url": "https://staging.example.com/orders?date=2026-10-01#tab=2",
     "path": "/orders",
@@ -149,7 +151,7 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
       "…": "the other Agentation fields below"
     }
   },
-  { "hash": "9c1e…", "deleted": true, "app": "MyApp", "deviceId": "e8c79f40-…", "deletedAt": "2026-10-26T09:58:12.000Z", "agentation": { "id": "1793000000000" } }
+  { "hash": "9c1e…", "deleted": true, "app": "MyApp", "deviceId": "e8c79f40-…", "sessionId": "PROJ-123", "deletedAt": "2026-10-26T09:58:12.000Z", "agentation": { "id": "1793000000000" } }
 ]</code></pre><button class="copy" type="button">Copy</button></div>
 		<ul class="facts">
 			<li><code>hash</code> is the SHA-256 of <code>app + origin + deviceId + agentation.id</code>. It stays the same when a note is edited, so upsert by <code>hash</code>. <code>deviceId</code> is a random id kept per browser, so two testers' notes never share a hash.</li>
@@ -166,6 +168,7 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 					<tr><td><code>hash</code></td><td>SHA-256 hex of <code>app + origin + deviceId + agentation.id</code>; the upsert key</td></tr>
 					<tr><td><code>deleted</code></td><td><code>false</code> for a live note</td></tr>
 					<tr><td><code>app</code>, <code>deviceId</code>, <code>origin</code></td><td>The <code>app</code> parameter, a random id kept per browser, and the site's origin</td></tr>
+					<tr><td><code>sessionId</code>, <code>publicIp</code></td><td>The session ID at send time (changing it re-sends the same <code>hash</code>), and the tester's public IP or <code>null</code></td></tr>
 					<tr><td><code>url</code></td><td>Full address of the page the note was made on, with query and fragment</td></tr>
 					<tr><td><code>path</code>, <code>query</code>, <code>fragment</code></td><td>Its parts: <code>/orders</code>, <code>?date=2026-10-01</code> (or empty), <code>#/orders/42</code> on hash-routed apps (or empty)</td></tr>
 					<tr><td><code>userAgent</code>, <code>viewport</code>, <code>devicePixelRatio</code>, <code>sentAt</code></td><td>Browser, <code>width×height</code>, pixel ratio and ISO time, all at send time</td></tr>
@@ -180,11 +183,11 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 					<tr><td><code>isMultiSelect</code>, <code>elementBoundingBoxes</code>, <code>isFixed</code>, <code>frame</code></td><td>Multi-select and its boxes; position-fixed element; iframe path for notes inside an iframe</td></tr>
 					<tr><td><code>kind</code>, <code>placement</code>, <code>rearrange</code>, <code>drawingIndex</code></td><td><code>feedback</code>, <code>placement</code> or <code>rearrange</code>, with details for layout notes and drawings</td></tr>
 					<tr><td><code>intent</code>, <code>severity</code>, <code>status</code>, <code>thread</code></td><td><code>fix</code>/<code>change</code>/<code>question</code>/<code>approve</code>; <code>blocking</code>/<code>important</code>/<code>suggestion</code>; <code>pending</code>/<code>acknowledged</code>/<code>resolved</code>/<code>dismissed</code>; replies</td></tr>
-					<tr><td><code>url</code>, <code>createdAt</code>, <code>updatedAt</code>, <code>resolvedAt</code>, <code>resolvedBy</code>, <code>authorId</code>, <code>sessionId</code></td><td>Agentation's sync metadata, when present. For the page, use the top-level <code>url</code>.</td></tr>
+					<tr><td><code>url</code>, <code>createdAt</code>, <code>updatedAt</code>, <code>resolvedAt</code>, <code>resolvedBy</code>, <code>authorId</code>, <code>sessionId</code></td><td>Agentation's sync metadata, when present. For the page, use the top-level <code>url</code>; for the session, the top-level <code>sessionId</code>.</td></tr>
 				</tbody>
 			</table>
 		</div>
-		<p>A deleted note carries only <code>hash</code>, <code>deleted: true</code>, <code>app</code>, <code>deviceId</code>, <code>deletedAt</code> and <code>agentation: { id }</code>.</p>
+		<p>A deleted note carries only <code>hash</code>, <code>deleted: true</code>, <code>app</code>, <code>deviceId</code>, <code>sessionId</code>, <code>deletedAt</code> and <code>agentation: { id }</code>.</p>
 		<p><strong>The server must</strong> answer the CORS preflight (<code>Access-Control-Allow-Origin</code> for the site and <code>Access-Control-Allow-Headers: Authorization, Content-Type</code>; no cookies are sent) and check the <code>Origin</code> header against the sites it expects.</p>
 		<p class="note">The token sits in the page's HTML, so anyone who can open the page can read it. Make it write-only and good for this endpoint alone.</p>
 	</section>
@@ -192,7 +195,9 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 	<section id="how">
 		<h2>How it works</h2>
 		<ul class="facts">
-			<li>Notes stay in the tester's own browser. Nothing is sent anywhere until they share, copy or post the report.</li>
+			<li>Notes stay in the tester's own browser. Nothing is sent anywhere until they share, copy, download or post the report. The one outside call is a public IP lookup to api.ipify.org.</li>
+			<li>The first note asks for a <strong>session ID</strong>, such as a Jira ticket or GitHub issue. Left blank it becomes <code>MyApp-</code> plus 8 random characters. It heads the report, names the download, and can be changed from <strong>Session</strong> in the drawer.</li>
+			<li>The report starts "I added 3 feedbacks on <em>host</em>. Fix each one, then verify it in the running app:", ready to paste into an AI agent.</li>
 			<li>The report covers every page of the app, grouped by page address (path, query and <code>#</code> part), in Agentation's detailed "forensic" format.</li>
 			<li><strong>Clear all</strong> removes every note on every page, after a confirmation.</li>
 			<li>The tab follows Agentation's light and dark theme.</li>
@@ -222,7 +227,8 @@ const tour = () => introJs.tour().setOptions( {
 		{ title: 'Feedback Annotation', intro: 'Leave notes on any part of a page, then send every note from every page as one report. This takes under a minute.' },
 		{ element: agentationButton(), scrollTo: 'off', title: 'Start annotating', intro: 'Click this button to turn annotation on. Click it again to turn it off.' },
 		{ element: document.querySelector( '.samples .card' ), title: 'Leave a note', intro: 'With annotation on, click anything, like this card, type what should change and press <b>Add</b>.' },
-		{ element: sendTab(), scrollTo: 'off', position: 'left', title: 'Send them all', intro: ( sendTab() ? 'This tab holds your notes.' : 'Once there is a note, a <b>Send Feedback</b> tab appears on the right edge.' ) + ' Open it to share by WhatsApp, Telegram or Email, copy the report, or clear everything.' },
+		{ element: sendTab(), scrollTo: 'off', position: 'left', title: 'Send them all', intro: ( sendTab() ? 'This tab holds your notes.' : 'Once there is a note, a <b>Send Feedback</b> tab appears on the right edge.' ) + ' Open it to share by WhatsApp, Telegram or Email, copy or download the report, or clear everything.' },
+		{ title: 'Session ID', intro: 'Your first note asks for a session ID, like a Jira ticket or GitHub issue, to group the feedback. Leave it blank for one like <b>TestApp-e8c79f40</b>. Change it any time from <b>Session</b> in the tab.' },
 		{ element: document.querySelector( '#install .code' ), title: 'Add it to your app', intro: 'Paste this one tag into the app\'s HTML. Use it on dev and staging only.' },
 		{ element: document.querySelector( '#parameters .table' ), title: 'Configure it', intro: 'Set the app name, hide share channels, or hide the tab, all from the script URL.' },
 	].map( ( s ) => s.element ? s : { title: s.title, intro: s.intro } ), // Missing elements become centred steps.
