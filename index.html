@@ -121,6 +121,26 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 &lt;script type="module" src="https://cdn.jsdelivr.net/gh/ets-tech/feedback-annotation@1/feedback-annotation.min.js?app=MyApp&amp;hide=whatsapp,telegram"&gt;&lt;/script&gt;</code></pre><button class="copy" type="button">Copy</button></div>
 	</section>
 
+	<section id="session">
+		<h2>Session ID and Download</h2>
+		<p>The first note opens a popup asking for a <strong>session ID</strong>: a Jira ticket, a GitHub issue, or anything else that groups this round of feedback. Left blank, it becomes <code>MyApp-</code> plus 8 random characters, e.g. <code>MyApp-e8c79f40</code>. Change it any time from <strong>Session</strong> at the top of the drawer; every note takes the new ID.</p>
+		<p><strong>Download</strong> in the drawer saves the report as a Markdown file named after the session ID, e.g. <code>PROJ-123.md</code>. Hand it to a developer, attach it to the ticket, or give it to an AI coding agent. Copy, Download and the share channels all send the same report:</p>
+		<div class="code"><pre><code>I added 3 feedbacks on staging.example.com. Fix each one, then verify it in the running app:
+
+**App:** MyApp
+
+**Environment:**
+- Session ID: PROJ-123
+- Public IP: 203.0.113.7
+- Viewport: 1440×900
+…</code></pre><button class="copy" type="button">Copy</button></div>
+		<ul class="facts">
+			<li>The public IP comes from api.ipify.org, looked up once per page load. If that fails, the line reads <code>Unavailable</code>.</li>
+			<li><strong>Clear all</strong> removes the session ID, so the next note asks again.</li>
+			<li>Remove the Download button with <code>hide=download</code>.</li>
+		</ul>
+	</section>
+
 	<section id="post">
 		<h2>Post to server</h2>
 		<p>Set <code>post_url</code> and the drawer gets a <strong>Post to server</strong> button. It sends one <code>POST</code> with a JSON array: every note on every page, plus the notes deleted since the last successful post. Notes stay in the browser afterwards, so posting again re-sends them.</p>
@@ -196,8 +216,6 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
 		<h2>How it works</h2>
 		<ul class="facts">
 			<li>Notes stay in the tester's own browser. Nothing is sent anywhere until they share, copy, download or post the report. The one outside call is a public IP lookup to api.ipify.org.</li>
-			<li>The first note asks for a <strong>session ID</strong>, such as a Jira ticket or GitHub issue. Left blank it becomes <code>MyApp-</code> plus 8 random characters. It heads the report, names the download, and can be changed from <strong>Session</strong> in the drawer.</li>
-			<li>The report starts "I added 3 feedbacks on <em>host</em>. Fix each one, then verify it in the running app:", ready to paste into an AI agent.</li>
 			<li>The report covers every page of the app, grouped by page address (path, query and <code>#</code> part), in Agentation's detailed "forensic" format.</li>
 			<li><strong>Clear all</strong> removes every note on every page, after a confirmation.</li>
 			<li>The tab follows Agentation's light and dark theme.</li>

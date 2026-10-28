@@ -69,6 +69,12 @@ I added 3 feedbacks on staging.example.com. Fix each one, then verify it in the 
 
 The public IP is looked up from [api.ipify.org](https://www.ipify.org) once per page load, when the tab first appears. If that fails (offline, or blocked by an ad-blocker or firewall) the line reads `Unavailable`.
 
+## Download
+
+**Download** in the drawer saves the report as a Markdown file named after the session ID, e.g. `PROJ-123.md`, or `MyApp-e8c79f40.md` for a generated one. Characters that can't go in a filename become `_`, so `#42` saves as `42.md`. Hand the file to a developer, attach it to the ticket, or give it to an AI coding agent: its first line tells the agent to fix and verify each note.
+
+Remove the button with `hide=download`.
+
 ## Post to server
 
 ```html
