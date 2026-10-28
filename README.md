@@ -67,7 +67,7 @@ I added 3 feedbacks on staging.example.com. Fix each one, then verify it in the 
 …
 ```
 
-The public IP is looked up from [api.ipify.org](https://www.ipify.org) once per page load, when the tab first appears. If that fails (offline, or blocked by an ad-blocker or firewall) the line reads `No Internet Connectivity`.
+The public IP is looked up from [api.ipify.org](https://www.ipify.org) once per page load, when the tab first appears. If that fails (offline, or blocked by an ad-blocker or firewall) the line reads `Unavailable`.
 
 ## Post to server
 

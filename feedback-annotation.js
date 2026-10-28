@@ -161,7 +161,7 @@ function sendButton() {
 		'',
 		'**Environment:**',
 		'- Session ID: ' + session(),
-		'- Public IP: ' + ( ip || 'No Internet Connectivity' ),
+		'- Public IP: ' + ( ip || 'Unavailable' ),
 		'- Viewport: ' + innerWidth + '×' + innerHeight,
 		'- Origin: ' + location.origin,
 		'- User Agent: ' + navigator.userAgent,
