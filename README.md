@@ -31,6 +31,7 @@ Add them to the script URL.
 | `app` | Name in the report header, the email subject and Agentation's app name | `TestApp` |
 | `hide` | Comma list of drawer items to remove: `whatsapp`, `telegram`, `email`, `download`. Copy and Clear all always show. | nothing hidden |
 | `hide_all_feedback_button` | `true` removes the tab, drawer, session ID and download; Agentation's own toolbar stays | `false` |
+| `hide_new_session_auto_popup` | `true` skips the session ID popup on the first note and generates an ID instead; change it any time from **Session** in the drawer | `false` |
 | `post_url` | Adds **Post to server** to the drawer, which POSTs every note as JSON to this URL. URL-encode it. | not set |
 | `post_token` | Sent as `Authorization: Bearer <token>` with each post | not set |
 | `post_label` | Label of the post button in the drawer and the Clear all dialog | `Post to server` |

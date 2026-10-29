@@ -14,6 +14,8 @@ const HIDE_BUTTON = 'true' === ( params.get( 'hide_all_feedback_button' ) || '' 
 // Posting lives in the drawer, so hide_all_feedback_button turns it off too.
 const POST_URL = HIDE_BUTTON ? '' : params.get( 'post_url' ) || '';
 const TOKEN = params.get( 'post_token' ) || '';
+// true: no popup on the first note; it gets a generated session ID, changeable from the drawer's Session row.
+const HIDE_POPUP = 'true' === ( params.get( 'hide_new_session_auto_popup' ) || '' ).toLowerCase();
 const POST_LABEL = params.get( 'post_label' ) || 'Post to server';
 
 // Defaults, written once per browser so later changes in the toolbar settings stick.
@@ -43,7 +45,7 @@ const deleted = ( list ) => POST_URL && update( DELETED, ( d ) => list.forEach( 
 const callbacks = {
 	onAnnotationAdd: ( a ) => {
 		remember( ( seen ) => { seen[ a.id ] = location.pathname + location.search + location.hash; } );
-		if ( ! session() ) askSession?.( true );
+		if ( ! session() ) HIDE_POPUP ? localStorage.setItem( SESSION, APP + '-' + uuid().slice( 0, 8 ) ) : askSession?.( true );
 	},
 	onAnnotationDelete: ( a ) => { remember( ( seen ) => { delete seen[ a.id ]; } ); deleted( [ a ] ); },
 	onAnnotationsClear: ( list ) => { remember( ( seen ) => list.forEach( ( a ) => delete seen[ a.id ] ) ); deleted( list ); },
